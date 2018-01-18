@@ -1,0 +1,60 @@
+---
+title: "Untitled"
+author: "Matthias Kullowatz"
+date: "January 18, 2018"
+output: html_document
+---
+
+# Background
+A commonly used credibility method in the actuarial field is limited fluctutation crediblity. It is often applied to a tabular model--a model where each segment's estimate/prediction is just the sample mean of that segment. A statistician would call this approach "frequentist," as it assumes there is a one true parameter value (e.g. female mortality rate at age 65) to be estimated. Essentially, a parameter estimation is deemed credible if its P% confidence interval is contained inside a user-selected error tolerance interval. 
+
+# Purpose
+This document aims to explore under what circumstances a GLM produces more credible results than a tabular approach. Considering limited fluctuation is based on model variance
+
+# Setup
+Required packages
+```{r, warning = F, message = F}
+library(dplyr)
+```
+
+# Data
+These data are generated randomly with a known, underlying relationship between the covariates and the response. For concreteness, I've created a relationship between the covariates attained age, gender, smoking status, age-gender-relative health score and the response, one-year mortality rate. The relationships are made to be intuitive, but are indeed fabricated. In the modeling process, we will leave out health score to see how the two approaches handle missing covariates.
+```{r, echo = F}
+smokingstatusfunc <- function(n){
+  start <- sample(1:n, 1)
+  stop <- sample(start:n, 1)
+  vec <- rep(0, n)
+  vec[start:stop] <- 1
+  vec
+}
+```
+
+```{r}
+set.seed(1)
+N <- 10000
+dat <- data.frame(ID = 1:N,
+                  InitialAge = 20,
+                  Smoker = sample(c(0, 1), N, replace = T, p = c(0.8, 0.2)),
+                  HealthScore = pmin(99.5, pmax(0.5, rnorm(N, 50, 10))),
+                  Gender = sample(c("M", "F"), N, replace = T))[rep(1:N, rep(81, N)),] %>%
+  group_by(ID) %>%
+  mutate(AttAge = 20:100,
+         SmokingStatus = ifelse(Smoker == 1, smokingstatusfunc(81), 0),
+         HealthScore = pmin(99.5, pmax(0.5, HealthScore + ifelse(Smoker == 1, -20, 0)))) # Health score includes smoking constant
+
+set.seed(2)
+dat <- dat %>%
+  mutate(TrueMort_logodds = -6 + # intercept
+           (AttAge - 20)*0.04 +
+           (Gender == "M")*(AttAge - 20)/80 +
+           (50 - HealthScore)*0.025 +  # smoking effect included here in Health score
+           SmokingStatus*(AttAge - 20)/160 ) # additional smoking effect for older people
+```
+
+# Tabular model
+
+# GLM
+
+# Efficacy comparison
+
+# Credibility comparison
