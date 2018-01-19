@@ -27,6 +27,13 @@ smokingstatusfunc <- function(n){
   vec[start:stop] <- 1
   vec
 }
+
+deathindfunc <- function(x){
+  deaths <- ifelse(runif(length(x)) < x, 1, 0)
+  first.death <- which(deaths == 1)[1]
+  deaths[(first.death + 1):length(deaths)] <- 2 # For filtering out people that have been dead a while
+  deaths
+}
 ```
 
 ```{r}
@@ -40,7 +47,8 @@ dat <- data.frame(ID = 1:N,
   group_by(ID) %>%
   mutate(AttAge = 20:100,
          SmokingStatus = ifelse(Smoker == 1, smokingstatusfunc(81), 0),
-         HealthScore = pmin(99.5, pmax(0.5, HealthScore + ifelse(Smoker == 1, -20, 0)))) # Health score includes smoking constant
+         HealthScore = pmin(99.5, pmax(0.5, HealthScore + ifelse(Smoker == 1, -20, 0)))) %>% # Health score includes smoking constant
+  ungroup() 
 
 set.seed(2)
 dat <- dat %>%
@@ -48,7 +56,16 @@ dat <- dat %>%
            (AttAge - 20)*0.04 +
            (Gender == "M")*(AttAge - 20)/80 +
            (50 - HealthScore)*0.025 +  # smoking effect included here in Health score
-           SmokingStatus*(AttAge - 20)/160 ) # additional smoking effect for older people
+           SmokingStatus*(AttAge - 20)/160, # additional smoking effect for older people
+         TrueMort_prob = 1/(1 + exp(-TrueMort_logodds)))
+set.seed(3)
+dat <- dat %>%
+  group_by(ID) %>%
+  arrange(AttAge) %>%
+  mutate(Death = deathindfunc(TrueMort_prob)) %>%
+  filter(Death < 2) %>%
+  ungroup() ERROR ERROR ERROR
+  
 ```
 
 # Tabular model
